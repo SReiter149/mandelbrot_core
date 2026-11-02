@@ -54,12 +54,13 @@ def get_path(start_point, func, iterations = 10, convergence_threshold = 10e-8):
     for i in range(iterations):
         new_point = func(path[-1])
         distances = [abs(p - new_point) for p in path]
+        path.append(new_point)
         if (
             min(distances) < convergence_threshold or 
             max(distances) > 1/convergence_threshold
-        ):
+        ):     
             return path
-        path.append(new_point)
+
     return path
 
 
@@ -93,7 +94,7 @@ def classify_paths(paths, fixed_points, convergence_threshold = 10e-8):
         if min(distances) < convergence_threshold:
             convergent_points.append(path[0])
             convergent_paths.append(path)
-        elif max(distnaces)> 1/convergence_threshold:
+        elif max(distances)> 1/convergence_threshold:
             divergent_points.append(path[0])
             divergent_paths.append(path)
         else:
