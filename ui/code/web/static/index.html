@@ -26,7 +26,7 @@
           <button type="submit" class="secondary">Plot c</button>
         </form>
         <form id="explorer-form">
-          <label>Maximum path steps<input id="explorer-steps" type="number" min="1" max="1000" value="30"></label>
+          <label>Maximum path steps<input id="explorer-steps" type="number" min="1" step="1" value="30"></label>
           <div class="actions"><button type="submit" class="primary">Update paths</button><button id="clear-selections" type="button" class="secondary">Clear all</button></div>
         </form>
         <p class="help">Paths use the live get_path stopping rules and may stop before the step limit. No period detection or animation is added.</p>
@@ -54,9 +54,10 @@
           <legend>Calculation</legend>
           <div class="field-grid two">
             <label>Grid spacing<input id="spacing" type="number" min="0.000001" step="any" value="0.2"></label>
-            <label>Iterations<input id="iterations" type="number" min="1" max="1000" step="1" value="50"></label>
-            <label>Orbit steps<input id="trajectory-steps" type="number" min="1" max="1000" step="1" value="10"></label>
+            <label>Iterations<input id="iterations" type="number" min="1" step="1" value="50"></label>
+            <label>Orbit steps<input id="trajectory-steps" type="number" step="1" value="10"></label>
           </div>
+          <p class="help">Orbit steps: positive for a forward path, negative for pullback points, zero for the target only.</p>
           <label>convergence_threshold<input id="threshold" type="number" min="0.000000001" step="any" value="0.001"></label>
         </fieldset>
 
@@ -101,6 +102,7 @@
         <canvas id="classification-canvas"></canvas>
         <canvas id="overlay-canvas"></canvas>
         <canvas id="interaction-canvas" aria-label="Click to add or remove trajectories"></canvas>
+        <div id="vector-minimap" aria-label="Parameter c minimap"><span>Parameter c</span><canvas id="vector-parameter-canvas" aria-label="Click to replace parameter c"></canvas></div>
         <div id="plot-empty" class="plot-empty">Connecting to the Sage calculation server…</div>
       </div>
 

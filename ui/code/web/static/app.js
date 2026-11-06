@@ -7,6 +7,7 @@ import {
   wheelBoundsAt,
 } from "./state.mjs";
 import { bindPointEntry, evaluatePoint } from './point_entry.mjs';
+import { setup, drawPath, loadParameterCurves } from './canvas_presentation.mjs';
 
 const $ = (id) => document.getElementById(id);
 const form = $("controls");
@@ -29,7 +30,7 @@ const contexts = Object.fromEntries(
   Object.entries(canvases).map(([key, canvas]) => [key, canvas.getContext("2d")]),
 );
 
-const palette = ["#7170ff", "#2dd4bf", "#f472b6", "#fb923c", "#38bdf8", "#a3e635"];
+const palette = ["#fff1b8", "#67e8f9", "#fdba74", "#f9a8d4", "#c4b5fd", "#a7f3d0"];
 const state = {
   appliedConfig: null,
   viewBounds: null,
@@ -53,10 +54,10 @@ function readNumber(id, label) {
   return value;
 }
 
-function readInteger(id, label, min, max) {
+function readInteger(id, label, min = -Infinity) {
   const value = readNumber(id, label);
-  if (!Number.isInteger(value) || value < min || value > max) {
-    throw new Error(`${label} must be an integer from ${min} to ${max}.`);
+  if (!Number.isSafeInteger(value) || value < min) {
+    throw new Error(`${label} must be ${min === 1 ? "a positive integer" : "an integer"}.`);
   }
   return value;
 }
@@ -72,9 +73,9 @@ async function readDraftConfig() {
       ymax: readNumber("ymax", "y maximum"),
     },
     spacing: readNumber("spacing", "Grid spacing"),
-    classificationIterations: readInteger("iterations", "Iterations", 1, 1000),
+    classificationIterations: readInteger("iterations", "Iterations", 1),
     convergenceThreshold: readNumber("threshold", "Convergence threshold"),
-    trajectorySteps: readInteger("trajectory-steps", "Orbit steps", 1, 1000),
+    trajectorySteps: readInteger("trajectory-steps", "Orbit steps"),
     vectorLength: 0.1,
   };
   if (!(config.bounds.xmin < config.bounds.xmax)) throw new Error("x maximum must exceed x minimum.");
@@ -105,6 +106,7 @@ function configureCanvas(canvas, ctx, width, height, dpr) {
 }
 
 function resizePlot() {
+  renderMinimap();
   const rect = canvases.interaction.getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   for (const [key, canvas] of Object.entries(canvases)) {
@@ -187,7 +189,7 @@ function drawArrow(ctx, start, end, color) {
 function drawVectorSamples(samples) {
   const ctx = contexts.vectors;
   ctx.lineWidth = 0.75;
-  ctx.globalAlpha = 0.62;
+  ctx.globalAlpha = 0.32;
   for (const sample of samples) {
     if (!sample.draw) continue;
     const start = worldToCanvas(sample.start, state.transform);
@@ -200,8 +202,8 @@ function drawVectorSamples(samples) {
 
 function drawClassificationSamples(samples) {
   const ctx = contexts.classifications;
-  const colors = { convergent: "#4ade80", unresolved: "#facc15", divergent: "#fb7185", cycle: "#38bdf8" };
-  ctx.globalAlpha = 0.78;
+  const colors = { convergent: "#80b59e", unresolved: "#baac78", divergent: "#b98693", cycle: "#83a9c4" };
+  ctx.globalAlpha = 0.36;
   for (const sample of samples) {
     const pixel = worldToCanvas(sample.point, state.transform);
     ctx.fillStyle = colors[sample.outcome];
@@ -217,13 +219,13 @@ function drawOverlay() {
   clearCanvas(ctx);
   for (const fixed of state.fixedPoints) {
     const pixel = worldToCanvas(fixed.point, state.transform);
-    ctx.fillStyle = "rgba(192,132,252,.2)";
+    ctx.fillStyle = "rgba(125,211,252,.14)";
     ctx.beginPath(); ctx.arc(pixel.x, pixel.y, 10, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#c084fc";
+    ctx.fillStyle = "#7dd3fc";
     ctx.beginPath(); ctx.arc(pixel.x, pixel.y, 4.5, 0, Math.PI * 2); ctx.fill();
     if (fixed.multiplicity === 2) {
       ctx.font = "11px SFMono-Regular, Consolas, monospace";
-      ctx.fillStyle = "#d8b4fe";
+      ctx.fillStyle = "#bae6fd";
       ctx.fillText("×2", pixel.x + 9, pixel.y - 8);
     }
   }
@@ -233,17 +235,21 @@ function drawOverlay() {
     ctx.strokeStyle = record.color;
     ctx.fillStyle = record.color;
     ctx.lineWidth = 1.8;
-    ctx.beginPath();
-    points.forEach((point, index) => {
+    if (record.geometry === 'path') {
+      ctx.beginPath();
+      points.forEach((point, index) => {
+        const pixel = worldToCanvas(point, state.transform);
+        if (index === 0) ctx.moveTo(pixel.x, pixel.y);
+        else ctx.lineTo(pixel.x, pixel.y);
+      });
+      ctx.stroke();
+    }
+    for (const point of points) {
       const pixel = worldToCanvas(point, state.transform);
-      if (index === 0) ctx.moveTo(pixel.x, pixel.y);
-      else ctx.lineTo(pixel.x, pixel.y);
-    });
-    ctx.stroke();
-    points.forEach((point, index) => {
-      const pixel = worldToCanvas(point, state.transform);
-      ctx.beginPath(); ctx.arc(pixel.x, pixel.y, index === 0 ? 5 : 2.2, 0, Math.PI * 2); ctx.fill();
-    });
+      ctx.beginPath(); ctx.arc(pixel.x, pixel.y, 2.2, 0, Math.PI * 2); ctx.fill();
+    }
+    const startPixel = worldToCanvas(record.start, state.transform);
+    ctx.beginPath(); ctx.arc(startPixel.x, startPixel.y, 5, 0, Math.PI * 2); ctx.fill();
     if (record.loading) {
       const pixel = worldToCanvas(record.start, state.transform);
       ctx.strokeStyle = "rgba(247,248,248,.7)";
@@ -301,6 +307,7 @@ function applyAcceptedBuild(message) {
   }
 
   activeParameter.textContent = formatC(config.c);
+  renderMinimap();
   emptyState.hidden = true;
   elapsedText.textContent = "—";
   state.pendingBuild = null;
@@ -426,6 +433,7 @@ async function requestTrajectory(record) {
     const current = state.trajectories.get(record.id);
     if (!isCurrentTrajectoryResponse(current, result)) return;
     current.points = result.points;
+    current.geometry = result.geometry;
     current.loading = false;
     current.terminationReason = result.termination_reason;
     drawOverlay();
@@ -492,6 +500,42 @@ canvases.interaction.addEventListener("click", (event) => {
   }
   addTrajectory(canvasToWorld(pixel, state.transform));
 });
+
+const minimapCanvas = $('vector-parameter-canvas');
+let minimapBounds = {xmin: -2, xmax: 1, ymin: -1.5, ymax: 1.5};
+let minimapCurves = null;
+let minimapTransform = null;
+function renderMinimap() {
+  if (!minimapCurves || $('vector-workspace').hidden) return;
+  const {ctx, transform} = setup(minimapCanvas, minimapBounds);
+  minimapTransform = transform;
+  minimapCurves.curves.forEach((curve, i) =>
+    drawPath(ctx, transform, curve, '#d0d6e0', false, minimapCurves.styles[i]));
+  if (state.appliedConfig) {
+    const {x, y} = worldToCanvas(state.appliedConfig.c, transform);
+    ctx.fillStyle = palette[0];
+    ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
+  }
+}
+minimapCanvas.addEventListener('wheel', event => {
+  if (!minimapTransform) return;
+  event.preventDefault();
+  const rect = minimapCanvas.getBoundingClientRect();
+  const pixel = {x: event.clientX - rect.left, y: event.clientY - rect.top};
+  minimapBounds = wheelBoundsAt(pixel, minimapTransform, event);
+  renderMinimap();
+}, {passive: false});
+minimapCanvas.addEventListener('click', event => {
+  if (!minimapTransform) return;
+  const rect = minimapCanvas.getBoundingClientRect();
+  const c = canvasToWorld({x: event.clientX - rect.left, y: event.clientY - rect.top}, minimapTransform);
+  $('c-expression').value = `${c.real} + (${c.imag})*I`;
+  rebuildDraft();
+});
+loadParameterCurves().then(result => {
+  minimapCurves = result;
+  renderMinimap();
+}).catch(error => showError(error.message));
 
 let draftRevision = 0;
 async function rebuildDraft() {
