@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Quadratic-Map Explorer</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <aside class="control-panel" aria-label="Explorer controls">
+      <header class="brand-block">
+        <div class="eyebrow">CARLETON MATH COMPS</div>
+        <h1>Quadratic-map explorer</h1>
+        <p>Explore <code>f<sub>c</sub>(z) = z² + c</code> through its fixed points, vector field, and orbits.</p>
+      </header>
+
+      <label class="mode-menu">Mode
+        <select id="mode"><option value="vector">Vector field</option><option value="mandelbrot" selected>Mandelbrot explorer</option></select>
+      </label>
+      <section id="explorer-controls">
+        <p class="help">Click parameters on the left. Each selected c has a matching path of zero on the right. Click a marker or Remove to delete it. Two-finger drag over either plot to pan; pinch or Ctrl+scroll to zoom at the pointer. Each Reset view restores its own full view.</p>
+        <form id="explorer-point-form" class="point-entry">
+          <label>Exact parameter c<input id="explorer-point" type="text" placeholder="sqrt(2) * I / pi" autocomplete="off" maxlength="256" required></label>
+          <button type="submit" class="secondary">Plot c</button>
+        </form>
+        <form id="explorer-form">
+          <label>Maximum path steps<input id="explorer-steps" type="number" min="1" max="1000" value="30"></label>
+          <div class="actions"><button type="submit" class="primary">Update paths</button><button id="clear-selections" type="button" class="secondary">Clear all</button></div>
+        </form>
+        <p class="help">Paths use the live get_path stopping rules and may stop before the step limit. No period detection or animation is added.</p>
+        <div id="explorer-error" class="form-error" role="alert" hidden></div>
+        <div id="selection-list" aria-label="Selected parameters"></div>
+      </section>
+      <form id="controls" novalidate hidden>
+        <fieldset>
+          <legend>Parameter c</legend>
+          <label>Sage expression<input id="c-expression" name="c-expression" type="text" value="I/4" placeholder="1/3 + sqrt(2)*I" autocomplete="off" maxlength="256" required></label>
+          <p class="help">Enter exact expressions using I, pi, sqrt(…), and ^. Rebuild evaluates c with Sage; plots and orbits use numerical values.</p>
+        </fieldset>
+
+        <fieldset>
+          <legend>View bounds</legend>
+          <div class="field-grid two">
+            <label>x min<input id="xmin" type="number" step="any" value="-2"></label>
+            <label>x max<input id="xmax" type="number" step="any" value="2"></label>
+            <label>y min<input id="ymin" type="number" step="any" value="-2"></label>
+            <label>y max<input id="ymax" type="number" step="any" value="2"></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Calculation</legend>
+          <div class="field-grid two">
+            <label>Grid spacing<input id="spacing" type="number" min="0.000001" step="any" value="0.2"></label>
+            <label>Iterations<input id="iterations" type="number" min="1" max="1000" step="1" value="50"></label>
+            <label>Orbit steps<input id="trajectory-steps" type="number" min="1" max="1000" step="1" value="10"></label>
+          </div>
+          <label>convergence_threshold<input id="threshold" type="number" min="0.000000001" step="any" value="0.001"></label>
+        </fieldset>
+
+        <div id="form-error" class="form-error" role="alert" hidden></div>
+        <div class="actions">
+          <button class="primary" type="submit">Rebuild</button>
+          <button id="clear-trajectories" class="secondary" type="button">Clear orbits</button>
+        </div>
+      </form>
+
+      <form id="vector-point-form" class="point-entry" hidden>
+        <label>Exact starting point z<input id="vector-point" type="text" placeholder="sqrt(2) * I / pi" autocomplete="off" maxlength="256" required></label>
+        <button type="submit" class="secondary">Plot z</button>
+        <p class="help">Sage arithmetic: I, pi, e, sqrt(…), and ^. Uses the current applied parameter c.</p>
+      </form>
+      <section id="vector-legend" class="legend" aria-label="Plot legend" hidden>
+        <h2>Legend</h2>
+        <div><i class="swatch convergent"></i><span>Converges to a fixed point</span></div>
+        <div><i class="swatch unresolved"></i><span>Unresolved within limit</span></div>
+        <div><i class="swatch divergent"></i><span>Escapes toward infinity</span></div>
+        <div><i class="swatch fixed"></i><span>Fixed point</span></div>
+        <div><i class="swatch orbit"></i><span>Selected orbit</span></div>
+      </section>
+    </aside>
+
+    <section id="vector-workspace" class="workspace" hidden>
+      <div class="workspace-header">
+        <div>
+          <div class="eyebrow">LIVE COMPLEX PLANE</div>
+          <h2 id="active-parameter">c = 0 + 0.25i</h2>
+        </div>
+        <div class="status-cluster">
+          <button id="reset-vector-view" type="button" class="secondary">Reset view</button>
+          <span id="stage-badge" class="stage-badge">Starting</span>
+          <span id="progress-text" class="progress-text">0 / 0 samples</span>
+        </div>
+      </div>
+
+      <div id="plot-frame" class="plot-frame" aria-label="Interactive complex-plane plot">
+        <canvas id="axes-canvas"></canvas>
+        <canvas id="vector-canvas"></canvas>
+        <canvas id="classification-canvas"></canvas>
+        <canvas id="overlay-canvas"></canvas>
+        <canvas id="interaction-canvas" aria-label="Click to add or remove trajectories"></canvas>
+        <div id="plot-empty" class="plot-empty">Connecting to the Sage calculation server…</div>
+      </div>
+
+      <footer class="plot-footer">
+        <span>Click to trace an orbit; click its start marker to remove it. Two-finger drag to pan; pinch or Ctrl+scroll to zoom without resampling. Reset view restores applied bounds.</span>
+        <span id="elapsed-text" class="mono">—</span>
+      </footer>
+    </section>
+    <section id="explorer-workspace" class="workspace">
+      <div class="workspace-header"><div><div class="eyebrow">LIVE SAGE HELPERS</div><h2>Mandelbrot explorer</h2></div><span id="explorer-status" role="status">Loading curves…</span></div>
+      <div class="explorer-plots">
+        <section><h3>Parameter plane · c <button id="reset-parameter-view" type="button" class="secondary">Reset view</button></h3><div class="explorer-frame"><canvas id="parameter-canvas" aria-label="Click to select parameters c"></canvas></div></section>
+        <section><h3>Paths of zero · z <button id="reset-orbit-view" type="button" class="secondary">Reset view</button></h3><div class="explorer-frame"><canvas id="orbit-canvas" aria-label="Matching paths starting at zero"></canvas></div></section>
+      </div>
+      <p class="help">Left: cardioid, period-two circle, and period-three curves from Sam’s core Graphics. Right: live get_path results using quadratic. Two-finger drag to pan; pinch or Ctrl+scroll to zoom without recalculating paths.</p>
+    </section>
+  </main>
+  <script type="module" src="/static/app.js"></script>
+  <script type="module" src="/static/explorer.mjs"></script>
+</body>
+</html>

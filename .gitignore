@@ -1,3 +1,11 @@
+# Local runtime, OS metadata, and credentials (all directories)
+.runtime/
+.DS_Store
+.env.*
+!.env.example
+.sage/
+.matplotlib/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
