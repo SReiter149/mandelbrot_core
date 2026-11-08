@@ -28,7 +28,13 @@ No separate sibling repository is required. With `ROOT` set to `ui/`, the server
 
 ## Choose SageMath and start
 
-On macOS with Homebrew, from the combined repository root:
+For an Intel/Ventura conda-forge setup and optional public hosting, follow [deployment/README.md](../deployment/README.md). With an activated Sage environment, run from the combined repository root:
+
+```bash
+SAGE_PYTHON="$CONDA_PREFIX/bin/python" bash ui/launch.sh
+```
+
+Alternatively, on a supported Homebrew macOS installation:
 
 ```bash
 brew install --cask sage
@@ -47,7 +53,7 @@ Open **http://127.0.0.1:8124** and keep the terminal running. Stop with **Ctrl+C
 
 ### How Sage is selected
 
-`launch.sh` searches in this order:
+`SAGE_PYTHON=/absolute/path/to/python` takes precedence and must successfully import `sage.all`; invalid explicit overrides fail rather than falling back. This runs the environment Python directly and avoids differences in Sage CLI flags. Otherwise, `launch.sh` searches for a Sage executable in this order:
 
 1. Explicit `SAGE` override (an executable path or command name). If invalid, it stops with an error rather than silently using another installation.
 2. `SAGE_ROOT`, then active `CONDA_PREFIX` and `VIRTUAL_ENV` directories.
@@ -71,7 +77,7 @@ For the remaining commands, change into `ui/` from the repository root:
 cd ui
 ```
 
-For a micromamba/conda installation, point `SAGE` at the environment's `bin/sage`. After activating that environment, `SAGE="$(command -v sage)" bash launch.sh` is also suitable.
+For micromamba/conda, prefer `SAGE_PYTHON="$CONDA_PREFIX/bin/python" bash launch.sh` after activating the environment. The existing `SAGE=/path/to/sage` option remains available for Sage CLIs that support `-python`.
 
 To avoid specifying it each launch, export it in your terminal session:
 
@@ -88,9 +94,9 @@ Use a different port if needed:
 SAGE=/absolute/path/to/sage PORT=8126 bash launch.sh
 ```
 
-Then open http://127.0.0.1:8126. The server binds to **127.0.0.1 only**; this is a local application, not a public deployment.
+Then open http://127.0.0.1:8126. The server still binds to **127.0.0.1 only**. Public Cloudflare hosting additionally sets `PUBLIC_ORIGIN=https://your-domain` to accept the configured hostname and HTTPS browser origin; see [deployment instructions](../deployment/README.md). Without that variable, requests remain local-only.
 
-The launcher resolves the UI root from its own location, sets the working directory there, and places new Sage/Matplotlib/cache files in `.runtime/` inside `ui/`. That directory is ignored by Git. It disables Python bytecode generation and runs `sage -python code/web/server.py`.
+The launcher resolves the UI root from its own location, sets the working directory there, and places new Sage/Matplotlib/cache files in `.runtime/` inside `ui/`. That directory is ignored by Git. It disables Python bytecode generation and runs the selected Sage-enabled Python or `sage -python code/web/server.py`. Managed hosting services instead keep their caches/logs under the repository root `.runtime/`.
 
 ## Updating core functions
 
@@ -118,13 +124,14 @@ Choose a mode from the menu:
 ### Vector field
 
 - Enter `c` as one Sage expression, such as `1/3 + sqrt(2)*I`, `-3/4`, or `I/4`; set view bounds, spacing, convergence threshold, and iteration counts, then select **Rebuild**. The expression is evaluated with Sage and converted to numerical coordinates for plotting and orbits; this is not exact symbolic orbit propagation. Invalid expressions leave the applied view unchanged.
-- **Iterations** controls each grid point's classification calculation. **Orbit steps** controls click-selected paths drawn over the grid. Both are maximum counts; core stopping rules still apply.
+- **Iterations** remains positive and controls each grid point's classification. **Orbit steps** is signed: positive requests a forward path, negative calls the live core's `get_pullback_paths`, and zero shows only the target. Pullbacks are unconnected dots with the target marked separately. No artificial 1000-step cap is imposed. Core stopping rules still apply.
+- The bottom-right parameter minimap reuses the core curves/styles. Clicking replaces the single active `c` and rebuilds the vector field; explorer mode still permits multiple selections. Accepted parameter changes clear old orbits. Panning/zooming and arrow colors use the current local UI implementation.
 - Click the plane to add a path; click near its starting marker again to remove it.
 - Two-finger trackpad scrolling pans; pinch or Ctrl+scroll zooms. These only redraw cached samples and paths, without resampling or changing the applied calculation bounds. **Reset view** returns to the applied build bounds. Accepted rebuilds reset the viewport; resizing or switching modes preserves it.
 - Rebuild sends fixed points first, then batches of arrows, then batches of classifications. Each batch is flushed immediately so the plot fills progressively.
 - Colors/categories come from the core classifier; an unresolved result is not a proof of escape or absence of an attracting cycle.
 
-**There is no grid point-count limit.** The 128-point processing batch size controls update frequency, not the total grid size. Very small spacing can consume substantial memory/CPU or make the process unresponsive. The grid's points are currently materialized before streaming begins, and Sage requests are processed serially, so a rebuild can delay other clicks. Use Ctrl+C to stop an expensive run; if necessary stop it from another terminal. No background service or automatic restart is installed.
+**There is no grid point-count limit.** The 128-point processing batch size controls update frequency, not the total grid size. Very small spacing can consume substantial memory/CPU or make the process unresponsive. The grid's points are currently materialized before streaming begins, and Sage requests are processed serially, so a rebuild can delay other clicks. Use Ctrl+C to stop an expensive run; if necessary stop it from another terminal. The local launcher installs no background services. Optional deployment tooling can install explicitly managed login services; see the deployment guide for stop/restart commands.
 
 ## Troubleshooting
 
@@ -145,11 +152,13 @@ export DOT_SAGE="$PWD/.runtime/sage"
 export MPLCONFIGDIR="$PWD/.runtime/matplotlib"
 export XDG_CACHE_HOME="$PWD/.runtime/cache"
 export PYTHONDONTWRITEBYTECODE=1
-/path/to/sage -python tests/test_api.py
-/path/to/sage -python tests/test_streaming.py
+/path/to/sage-environment/bin/python tests/test_api.py
+/path/to/sage-environment/bin/python tests/test_streaming.py
 node --test tests/*.test.mjs
 python3 tests/test_sage_discovery.py
 python3 tests/test_layout.py
+python3 tests/test_python_launcher.py
+# From repository root: python3 -m unittest discover -s deployment/tests -v
 bash -n launch.sh scripts/find_sage.sh
 ```
 

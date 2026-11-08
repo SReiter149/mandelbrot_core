@@ -1,0 +1,10 @@
+# Create a hosting environment: mamba env create -n host -f environment.yml
+# Matches the working Sage 10.9 / Python 3.14 runtime; allow Python patch updates.
+# Resolve platform-specific dependencies on the target Mac, not by copying an env.
+name: mandelbrot
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python=3.14
+  - sage=10.9
