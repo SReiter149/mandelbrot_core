@@ -146,11 +146,11 @@ button.secondary:hover { background: rgba(255,255,255,.06); }
 }
 .legend > div { display: flex; align-items: center; gap: 9px; margin: 8px 0; color: var(--muted); font-size: 11px; }
 .swatch { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
-.swatch.convergent { background: var(--green); }
-.swatch.unresolved { background: var(--yellow); }
-.swatch.divergent { background: var(--red); }
-.swatch.fixed { background: var(--purple); box-shadow: 0 0 0 3px rgba(192,132,252,.2); }
-.swatch.orbit { background: var(--accent); border-radius: 2px; width: 15px; height: 3px; }
+.swatch.convergent { background: #80b59e; opacity: .6; }
+.swatch.unresolved { background: #baac78; opacity: .6; }
+.swatch.divergent { background: #b98693; opacity: .6; }
+.swatch.fixed { background: #7dd3fc; box-shadow: 0 0 0 3px rgba(125,211,252,.14); }
+.swatch.orbit { background: #fff1b8; border-radius: 2px; width: 15px; height: 3px; }
 
 .workspace {
   min-width: 0;
@@ -186,6 +186,9 @@ button.secondary:hover { background: rgba(255,255,255,.06); }
 }
 .plot-frame canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 #interaction-canvas { cursor: crosshair; touch-action: none; }
+#vector-minimap { position: absolute; right: 12px; bottom: 12px; width: min(220px, 36%); aspect-ratio: 1; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #0b0c0e; }
+#vector-minimap span { position: absolute; z-index: 1; top: 6px; left: 8px; font-size: 11px; color: var(--muted); pointer-events: none; }
+#vector-parameter-canvas { cursor: crosshair; }
 .plot-empty {
   position: absolute;
   inset: 0;

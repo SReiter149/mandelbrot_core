@@ -1,4 +1,4 @@
-"""Loopback-only Sage UI transport. All dynamics and Sage plots live in Sam's core.
+"""Loopback-bound Sage UI transport with optional public-origin tunnel support.
 
 Run with Sage's Python; Sage load preparses in memory (no copied core files).
 The single request worker deliberately serializes Sage calls.
@@ -8,6 +8,7 @@ import ast
 import json
 import math
 import mimetypes
+import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -19,6 +20,7 @@ from sage.plot.colors import to_mpl_color
 
 ROOT = Path(__file__).resolve().parents[2]
 STATIC = ROOT / 'code/web/static'
+PUBLIC_ORIGIN = os.environ.get('PUBLIC_ORIGIN', '').rstrip('/')
 CORE_DIR = ROOT.parent / 'core_code'
 CORE = dict(vars(sage.all))
 for filename in ('math_functions.sage', 'plotting_functions.sage', 'mandelbrot.sage'):
@@ -34,9 +36,13 @@ def number(value, label):
     return result
 
 
-def integer(value, label, maximum=1000):
-    if type(value) is not int or not 1 <= value <= maximum:
-        raise ValueError(f'{label} must be an integer from 1 to {maximum}')
+# JSON integers must round-trip exactly through the JavaScript client.
+MAX_SAFE_INTEGER = 9007199254740991
+
+
+def integer(value, label, maximum=MAX_SAFE_INTEGER, minimum=1):
+    if type(value) is not int or not minimum <= value <= maximum:
+        raise ValueError(f'{label} must be an integer from {minimum} to {maximum}')
     return value
 
 
@@ -90,11 +96,20 @@ def expression_point(payload):
 def trajectory(payload):
     c = complex_input(payload.get('c'), 'c')
     start = complex_input(payload.get('start'), 'start')
-    steps = integer(payload.get('steps'), 'steps')
+    steps = integer(payload.get('steps'), 'steps', minimum=-MAX_SAFE_INTEGER)
     # No recurrence, termination, or classification logic belongs in this adapter.
-    path = CORE['get_path'](start, lambda z: CORE['quadratic'](z, c), iterations=steps)
+    if steps < 0:
+        path = CORE['get_pullback_paths'](c, start, iterations=abs(steps))
+        reason = 'Returned by live get_pullback_paths (its own stopping rules)'
+    elif steps == 0:
+        path = [start]
+        reason = 'Zero steps: target only'
+    else:
+        path = CORE['get_path'](start, lambda z: CORE['quadratic'](z, c), iterations=steps)
+        reason = 'Returned by live get_path (its own stopping rules)'
     return dict(points=[point_payload(p) for p in path],
-                termination_reason='Returned by live get_path (its own stopping rules)',
+                geometry='path' if steps > 0 else 'points',
+                termination_reason=reason,
                 **{key: payload.get(key) for key in ('trajectory_id', 'trajectory_generation', 'request_revision')})
 
 
@@ -193,6 +208,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_data(status, {'error': {'message': message}})
 
     def local(self):
+        if PUBLIC_ORIGIN and self.headers.get('Host', '') == urlsplit(PUBLIC_ORIGIN).netloc:
+            return True
         if urlsplit('//' + self.headers.get('Host', '')).hostname not in ('localhost', '127.0.0.1', '::1'):
             self.error(403, 'Only loopback hosts are allowed')
             return False
@@ -217,7 +234,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if not self.local():
             return
-        if self.headers.get('Origin') not in (None, 'http://' + self.headers.get('Host', '')):
+        if self.headers.get('Origin') not in (None, 'http://' + self.headers.get('Host', ''), PUBLIC_ORIGIN or None):
             return self.error(403, 'Cross-origin requests are not allowed')
         if self.headers.get('Content-Type', '').split(';')[0] != 'application/json':
             return self.error(415, 'application/json required')
@@ -236,7 +253,7 @@ class Handler(BaseHTTPRequestHandler):
                 # Validate separately so live core failures are not called invalid input.
                 complex_input(payload.get('c'), 'c')
                 complex_input(payload.get('start'), 'start')
-                integer(payload.get('steps'), 'steps')
+                integer(payload.get('steps'), 'steps', minimum=-MAX_SAFE_INTEGER)
             else:
                 return self.error(404, 'Not found')
         except (ValueError, TypeError, OverflowError) as exc:
