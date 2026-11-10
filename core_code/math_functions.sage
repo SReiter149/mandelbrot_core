@@ -15,13 +15,23 @@ def polar_point_sampler(center, r_max, r_tick, t_tick):
             point = CC(r*e^(t * 2 * pi * I) + center)
             yield point
 
+def uniform_polar_point_sampler(center, r_max, spacing):
+    center = CC(center)
+    yield center
+
+    for r in srange(spacing, r_max + spacing/2, spacing):
+        n = max(1, ceil(2*pi*r / spacing))
+        for k in range(n):
+            angle = 2*pi*k/n
+            yield center + CC(r) * CC(exp(I*angle))
+
 def get_fixed_points(c):
     return ((1 - (1 - 4*c)**0.5)/2, (1 + (1 - 4*c)**0.5)/2)
 
 def quadratic(z, c):
-    return z**2 + c
+    return z*z+ c
 
-def iterate_quadratic(z,c,iterations = 10, convergence_threshold = 10e-8):
+def iterate_quadratic(z,c,iterations = 10, escape_radius = 2, convergence_threshold = 10e-8):
     """
     iterates the function z^2 + c given the starting point z and the constant c.
     returns a list of `iterations` results.
@@ -30,12 +40,13 @@ def iterate_quadratic(z,c,iterations = 10, convergence_threshold = 10e-8):
     yield previous_results[-1]
     for i in range(iterations):
         result = quadratic(z, c)
-        if (abs(result) > 1/convergence_threshold) or (norm(result - previous_results[-1]) < convergence_threshold):
-            break
         yield result
+        if (abs(result) > escape_radius) or (abs(result - previous_results[-1]) < convergence_threshold):
+            break
         if result in previous_results:
             break
         previous_results.append(result)
+        z = result
 
 '''
 VECTOR FIELD
@@ -49,7 +60,7 @@ def get_vector_field(start_points, func):
 '''
 PATHS AND CONVERGENCE
 '''
-def get_path(start_point, func, iterations = 10, convergence_threshold = 10e-8):
+def get_path(start_point, func, iterations = 10, escape_radius = 2, convergence_threshold = 10e-8):
     path = [start_point]
     for i in range(iterations):
         new_point = func(path[-1])
@@ -57,7 +68,7 @@ def get_path(start_point, func, iterations = 10, convergence_threshold = 10e-8):
         path.append(new_point)
         if (
             min(distances) < convergence_threshold or 
-            max(distances) > 1/convergence_threshold
+            abs(new_point) > escape_radius
         ):     
             return path
 
@@ -94,7 +105,7 @@ def classify_paths(paths, fixed_points, convergence_threshold = 10e-8):
         if min(distances) < convergence_threshold:
             convergent_points.append(path[0])
             convergent_paths.append(path)
-        elif max(distances)> 1/convergence_threshold:
+        elif max(distances)> 2:
             divergent_points.append(path[0])
             divergent_paths.append(path)
         else:

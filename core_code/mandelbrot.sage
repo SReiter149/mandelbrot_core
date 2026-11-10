@@ -49,3 +49,45 @@ def add3CycleBasin(G):
             plot_points = 1000
         )
     return G
+
+def mandelbrotApproximation(G, iterations, spacing = 0.05, verbose = False):
+    from matplotlib import colormaps
+    from matplotlib.colors import Normalize
+
+    points_in = []
+    points_out = []
+    steps_out = []
+    count = 0
+    
+    for c_sample in uniform_polar_point_sampler(0, 2, spacing):
+        if verbose:
+            count += 1
+            if count % 500 == 0:
+                print(f"finished with {count} samples")
+        Qc = lambda z: quadratic(z, c_sample)
+        path = get_path(0, Qc, iterations = iterations)
+        if abs(path[-1]) > 2:
+            points_out.append(c_sample)
+            steps_out.append(len(path))
+        else:
+            points_in.append(c_sample)
+
+    normalize_function = Normalize(vmin=log(min(steps_out)), vmax=log(max(steps_out)))
+    cmap = colormaps["plasma"]
+    out_colors = [cmap(normalize_function(log(float(steps)))) for steps in steps_out]
+    G += scatter_plot(
+        [(z.real(), z.imag()) for z in points_out],
+        facecolor = out_colors,
+        alpha = 1,
+        markersize = 1,
+        edgecolor="none"
+    )
+    G += scatter_plot(
+        [(z.real(), z.imag()) for z in points_in],
+        facecolor = "black",
+        edgecolor="none",
+        markersize = 1
+    )
+
+
+    return G
