@@ -133,6 +133,29 @@ Choose a mode from the menu:
 
 **There is no grid point-count limit.** The 128-point processing batch size controls update frequency, not the total grid size. Very small spacing can consume substantial memory/CPU or make the process unresponsive. The grid's points are currently materialized before streaming begins, and Sage requests are processed serially, so a rebuild can delay other clicks. Use Ctrl+C to stop an expensive run; if necessary stop it from another terminal. The local launcher installs no background services. Optional deployment tooling can install explicitly managed login services; see the deployment guide for stop/restart commands.
 
+### External rays
+
+- Choose **External rays**. The left plot calls the live core's `plot_parametric`; the right calls `plot_external_rays` with the same expression, symbolic variable, range, and step size, and the page's loaded `psi`. No alternate sampling or psi evaluation is implemented in the UI.
+- Enter a curve such as `t*exp(I*pi/4)`, variable `t`, range `1.1` to `2`, and step `0.1`; select **Add curve**. Each addition retains previous curves. **Remove** deletes that curve from both planes; **Clear all** also invalidates pending replies. Invalid input or core failures leave earlier successful curves intact.
+- Expressions use the same allowlisted arithmetic/constants/functions as exact point input, plus the named parameter. Attributes, imports, unknown symbols, and arbitrary Python/Sage statements are rejected. The range must be finite and increasing; the step must be finite and positive. There is no sample-count or work cap. Small steps or expensive expressions can block the serial Sage server; removing a pending curve stops displaying its reply but does not interrupt a core calculation already running.
+- The actual core points remain unconnected points, with their native styles and scatter sizes. These planes have a light background so the current core's black points are visible; there are no color controls or new curve palettes. Pan, zoom, and reset reuse the existing viewport helpers and do not recompute curves. Each plane starts/resets to −2…2; off-view curves remain available by panning/zooming. Mode switches preserve curves and viewports.
+
+#### Saved coefficients and page refresh
+
+The portable default coefficient directory is `saves/` at the repository root, **not** `tests/saves/`. To use another existing directory, set `PSI_SAVES_DIR` for the server process:
+
+```bash
+PSI_SAVES_DIR=/absolute/path/to/saves SAGE_PYTHON="$CONDA_PREFIX/bin/python" bash ui/launch.sh
+```
+
+Activate the Sage environment first so its supporting executables (including Singular) are on `PATH`. Never point this at untrusted `.sobj` files: Sage saves are executable serialized objects, not a safe interchange format. The directory is operator configuration; HTTP clients cannot choose a path.
+
+Every full page load requests a fresh coefficient snapshot, even if a different mode is initially visible. The server selects only filenames matching `psi_coefficients_<digits>.sobj`, chooses the greatest **numeric** suffix (10 beats 9), and loads only that winner using core `load_psi`. Unnumbered/nonmatching saves are ignored; modification time is irrelevant. `Using <count> coefficients` is the actual loaded list length, not the suffix.
+
+Adding/removing/clearing curves and switching modes do not rescan or reload. An opaque server-issued page token refers to the already loaded psi, so new saves or changes to the original file do not change existing page sessions or other browsers. A full page refresh can select a newer save. Snapshots stay in server memory until that server exits; after a server restart, refresh open pages to obtain valid tokens.
+
+If no numbered save exists or the selected winner is corrupt, External rays displays an error and disables addition; it neither falls back to an older save nor generates coefficients. Explorer/vector-field modes remain available. Correct the operator directory/save and fully refresh the page.
+
 ## Troubleshooting
 
 - **Sage executable not found:** install Sage (on macOS, `brew install --cask sage`) and rerun. For a nonstandard location, set `SAGE` explicitly.
@@ -154,6 +177,7 @@ export XDG_CACHE_HOME="$PWD/.runtime/cache"
 export PYTHONDONTWRITEBYTECODE=1
 /path/to/sage-environment/bin/python tests/test_api.py
 /path/to/sage-environment/bin/python tests/test_streaming.py
+/path/to/sage-environment/bin/python tests/test_parametric_rays.py
 node --test tests/*.test.mjs
 python3 tests/test_sage_discovery.py
 python3 tests/test_layout.py
@@ -165,6 +189,18 @@ bash -n launch.sh scripts/find_sage.sh
 The API tests require the real core in this checkout, not mock math. Streaming tests check both real-core batching and delivery before the full computation finishes. These tests were run locally; they are not a claim of cross-platform validation or GitHub CI coverage.
 
 Optional browser acceptance uses `tests/browser_acceptance.py`, Playwright, and a running server. That script currently hard-codes the macOS Google Chrome executable; adjust it for other platforms. Historical screenshots were omitted from this import. Older migration notes are archived evidence, not current runtime state or setup instructions.
+
+The new `tests/browser_parametric_rays.py` exercises real HTTP/core plots, paired canvas points, multiple curves, invalid-input retention, independent pan/zoom/reset, removal/clear, mode persistence, and page-refresh tokens. It also injects a coefficient-unavailable response to check the browser's error handling; missing/corrupt saves are tested against real Sage/HTTP in the Python suites. It requires `UI_URL` pointing at an **isolated test server** configured with existing saves. `CHROME_PATH` can override the default macOS Google Chrome executable. Screenshot output is under ignored `.runtime/`.
+
+For example, from `ui/` after starting that isolated server:
+
+```bash
+python3 -m venv .runtime/browser-env
+.runtime/browser-env/bin/python -m pip install playwright
+UI_URL=http://127.0.0.1:18124 .runtime/browser-env/bin/python tests/browser_parametric_rays.py
+```
+
+No npm build is required. Keep browser-tool environments/screenshots under `.runtime/`; older browser scripts write relative `tests/` screenshots, so run those from `.runtime/` with a `tests/` subdirectory rather than the repository root.
 
 ## Design and ownership
 

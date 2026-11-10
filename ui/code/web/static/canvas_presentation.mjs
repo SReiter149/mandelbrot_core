@@ -9,7 +9,7 @@ export function loadParameterCurves() {
   });
 }
 
-export function setup(canvas, bounds) {
+export function setup(canvas, bounds, background = '#0b0c0e') {
   const { width, height } = canvas.getBoundingClientRect();
   const ratio = Math.min(devicePixelRatio || 1, 2);
   canvas.width = Math.round(width * ratio);
@@ -17,7 +17,7 @@ export function setup(canvas, bounds) {
   const ctx = canvas.getContext('2d');
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
   const transform = { width, height, bounds };
-  ctx.fillStyle = '#0b0c0e';
+  ctx.fillStyle = background;
   ctx.fillRect(0, 0, width, height);
   ctx.font = '11px monospace';
   for (let n = Math.ceil(bounds.xmin); n <= bounds.xmax; n++) {
@@ -65,4 +65,13 @@ export function drawPath(ctx, transform, points, color, markers = false, style =
     }
   }
   ctx.restore();
+}
+
+export function drawPrimitive(ctx, transform, primitive) {
+  const style = {...primitive.style};
+  if (primitive.geometry === 'points') {
+    style.linestyle = '';
+    style.markersize = Math.sqrt(style.size);
+  }
+  drawPath(ctx, transform, primitive.points, null, false, style);
 }

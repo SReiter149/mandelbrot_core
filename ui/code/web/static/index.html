@@ -17,7 +17,7 @@
       </header>
 
       <label class="mode-menu">Mode
-        <select id="mode"><option value="vector">Vector field</option><option value="mandelbrot" selected>Mandelbrot explorer</option></select>
+        <select id="mode"><option value="vector">Vector field</option><option value="mandelbrot" selected>Mandelbrot explorer</option><option value="rays">External rays</option></select>
       </label>
       <section id="explorer-controls">
         <p class="help">Click parameters on the left. Each selected c has a matching path of zero on the right. Click a marker or Remove to delete it. Two-finger drag over either plot to pan; pinch or Ctrl+scroll to zoom at the pointer. Each Reset view restores its own full view.</p>
@@ -32,6 +32,22 @@
         <p class="help">Paths use the live get_path stopping rules and may stop before the step limit. No period detection or animation is added.</p>
         <div id="explorer-error" class="form-error" role="alert" hidden></div>
         <div id="selection-list" aria-label="Selected parameters"></div>
+      </section>
+      <section id="rays-controls" hidden>
+        <p id="rays-coefficients" role="status">Loading coefficients…</p>
+        <form id="rays-form">
+          <label>Parametric expression<input id="rays-expression" type="text" value="t*exp(I*pi/4)" maxlength="256" required autocomplete="off"></label>
+          <label>Parameter variable<input id="rays-variable" type="text" value="t" maxlength="32" required autocomplete="off"></label>
+          <div class="field-grid two">
+            <label>Range start<input id="rays-start" type="number" step="any" value="1.1" required></label>
+            <label>Range end<input id="rays-end" type="number" step="any" value="2" required></label>
+          </div>
+          <label>Step size<input id="rays-step" type="number" step="any" value="0.1" required></label>
+          <div class="actions"><button id="rays-add" type="submit" class="primary" disabled>Add curve</button><button id="rays-clear" type="button" class="secondary">Clear all</button></div>
+        </form>
+        <p class="help">Arithmetic with your parameter, I, pi, e, sqrt, sin, cos, tan, exp, log, abs, and ^. Both plots use the core’s sampled points, not connecting lines. Small steps can be expensive and delay other requests; there is no sample-count cap.</p>
+        <div id="rays-error" class="form-error" role="alert" hidden></div>
+        <div id="rays-list" aria-label="Parametric curves"></div>
       </section>
       <form id="controls" novalidate hidden>
         <fieldset>
@@ -119,8 +135,17 @@
       </div>
       <p class="help">Left: cardioid, period-two circle, and period-three curves from Sam’s core Graphics. Right: live get_path results using quadratic. Two-finger drag to pan; pinch or Ctrl+scroll to zoom without recalculating paths.</p>
     </section>
+    <section id="rays-workspace" class="workspace" hidden>
+      <div class="workspace-header"><div><div class="eyebrow">LIVE SAGE HELPERS</div><h2>External rays</h2></div><span id="rays-status" role="status">Loading coefficients…</span></div>
+      <div class="explorer-plots">
+        <section><h3>Source curve <button id="rays-reset-source" type="button" class="secondary">Reset view</button></h3><div class="explorer-frame"><canvas id="rays-source" aria-label="Source parametric curve"></canvas></div></section>
+        <section><h3>Image under psi <button id="rays-reset-image" type="button" class="secondary">Reset view</button></h3><div class="explorer-frame"><canvas id="rays-image" aria-label="Parametric curve mapped by psi"></canvas></div></section>
+      </div>
+      <p class="help">Core plot_parametric on the left, plot_external_rays on the right. Two-finger scrolling pans; pinch or Ctrl+scroll zooms without resampling. Reset view restores −2…2. Coefficients remain fixed until a full page refresh.</p>
+    </section>
   </main>
   <script type="module" src="/static/app.js"></script>
   <script type="module" src="/static/explorer.mjs"></script>
+  <script type="module" src="/static/rays.mjs"></script>
 </body>
 </html>
