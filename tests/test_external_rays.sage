@@ -8,7 +8,7 @@ image_directory = root / "tests" / "testImages"
 saves_directory = root / "tests" / "saves"
 
 def test_generate_and_load_psi():
-    generate_psi_coeffs(3, saves_directory)
+    generate_psi_coeffs(4, saves_directory)
     save_path = saves_directory / "psi_coefficients_2.sobj"
     psi, psi_coeffs = load_psi(save_path)
     print(psi)
