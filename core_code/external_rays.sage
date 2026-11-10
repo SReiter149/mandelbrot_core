@@ -29,34 +29,50 @@ def generate_psi_coeffs(n, saves_directory = None):
     print(f"psi: {psi}")
 
     An = psi 
-    for i in range(n):
-        An = An * An + psi
-
-    print(f"A_n has been generated")
-    
-
     b_values = []
-    for i in range(len(b_variables)):
-        b_values.append(solve([SR(An.monomial_coefficient(w^(2^n - (i+1)))) == 0], SR(b_variables[i]))[0].rhs()) #for n = 1, it was 1
-        An = An.map_coefficients(
-            lambda a: a.subs({b_variables[i]: B(b_values[-1])})
-        )
-        print()
-        # print(f"An is now {An}")
-        print(f"b_variables{i} value: {b_values[-1]}")
+    for iteration in range(1, n+1):
+        psi = w
+        for i in range(2*(2^iteration - 1)):
+            if i < len(b_values):
+                psi += b_values[i] * w^(-i)
+            else:
+                psi += b_variables[i] * w^(-i)
+        psi += O(w^-(2 * (2^iteration) - 1))
+
+        An = psi
+        for i in range(iteration):
+            An = An * An + psi
+
+        print(f"A_{iteration} has been generated")
+        
+        for b_index in range(2 * (2^(iteration - 1) - 1), 2 * (2^iteration - 1)):
+            b_values.append(solve([SR(An.monomial_coefficient(w^(2^iteration - (b_index+1)))) == 0], SR(b_variables[b_index]))[0].rhs()) #for n = 1, it was 1
+            An = An.map_coefficients(
+                lambda a: a.subs({b_variables[b_index]: B(b_values[-1])})
+            )
+            psi = psi.map_coefficients(
+                lambda a: a.subs({b_variables[b_index]: B(b_values[-1])})
+            )
+            
+            print()
+            # print(f"An is now {An}")
+            print(f"b_variables{b_index} value: {b_values[-1]}")
+
+        print(f"psi is now {psi}")
+        if saves_directory:
+            save_path = saves_directory / "psi_coefficients.sobj"
+            save_path_i = saves_directory / f"psi_coefficients_{iteration}.sobj"
+
+            save(b_values, str(save_path))
+            save(b_values, str(save_path_i))
+            print(f"saved to both {save_path}, and {save_path_i}")
 
 
     print(f"here are all the b_variables values: {b_values}")
     print(f"their numberators are: {[b_values[i].numerator() for i in range(len(b_values))]}")
     print(f"their denominators are 2^: {[log(b_values[i].denominator(), 2) for i in range(len(b_values))]}")
 
-    if saves_directory:
-        save_path = saves_directory / "psi_coefficients.sobj"
-        save_path_n = saves_directory / f"psi_coefficients_{n}.sobj"
 
-        save(b_values, str(save_path))
-        save(b_values, str(save_path_n))
-        print(f"saved to both {save_path}, and {save_path_n}")
     return b_values
 
 def load_psi(path):
