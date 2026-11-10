@@ -152,7 +152,8 @@ $('clear-selections').addEventListener('click', () => {
 $('mode').addEventListener('change', () => {
   const vector = $('mode').value === 'vector';
   for (const id of ['controls', 'vector-point-form', 'vector-legend', 'vector-workspace']) $(id).hidden = !vector;
-  for (const id of ['explorer-controls', 'explorer-workspace']) $(id).hidden = vector;
+  for (const id of ['explorer-controls', 'explorer-workspace']) $(id).hidden = $('mode').value !== 'mandelbrot';
+  for (const id of ['rays-controls', 'rays-workspace']) $(id).hidden = $('mode').value !== 'rays';
   window.dispatchEvent(new CustomEvent('explorer-mode', {detail: $('mode').value}));
   render();
 });

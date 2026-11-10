@@ -9,6 +9,8 @@ import json
 import math
 import mimetypes
 import os
+import re
+import secrets
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -23,8 +25,30 @@ STATIC = ROOT / 'code/web/static'
 PUBLIC_ORIGIN = os.environ.get('PUBLIC_ORIGIN', '').rstrip('/')
 CORE_DIR = ROOT.parent / 'core_code'
 CORE = dict(vars(sage.all))
-for filename in ('math_functions.sage', 'plotting_functions.sage', 'mandelbrot.sage'):
+for filename in ('math_functions.sage', 'plotting_functions.sage', 'mandelbrot.sage', 'external_rays.sage'):
     load(str(CORE_DIR / filename), CORE)
+
+SAVES_DIR = Path(os.environ.get('PSI_SAVES_DIR', str(ROOT.parent / 'saves')))
+# Opaque, server-issued identities hold the loaded psi, never a client-supplied path.
+COEFFICIENT_SESSIONS = {}
+
+
+def coefficient_session():
+    candidates = [(int(match[1]), path) for path in SAVES_DIR.glob('psi_coefficients_*.sobj')
+                  if (match := re.fullmatch(r'psi_coefficients_([0-9]+)\.sobj', path.name))
+                  and path.is_file()]
+    if not candidates:
+        raise ValueError('No numbered psi coefficient saves found; configure PSI_SAVES_DIR and refresh the page')
+    selected = max(candidates, key=lambda item: (item[0], item[1].name))[1]
+    try:
+        psi, coefficients = CORE['load_psi'](selected)
+        if not isinstance(coefficients, list):
+            raise ValueError('Expected a coefficient list')
+    except Exception as exc:
+        raise ValueError(f'Unable to load selected coefficient save {selected.name}: {exc}') from exc
+    token = secrets.token_urlsafe(32)
+    COEFFICIENT_SESSIONS[token] = (psi, len(coefficients))
+    return dict(session_token=token, coefficient_count=len(coefficients))
 
 
 def number(value, label):
@@ -63,8 +87,13 @@ EXPRESSION_NAMES['abs'] = abs
 EXPRESSION_NAMES['i'] = sage.all.I
 
 
-def expression_point(payload):
-    expression = payload.get('expression')
+def arithmetic_expression(expression, variable=None):
+    names = dict(EXPRESSION_NAMES)
+    if variable is not None:
+        if (not isinstance(variable, str) or not re.fullmatch(r'[A-Za-z][A-Za-z0-9_]*', variable)
+                or len(variable) > 32 or variable in names):
+            raise ValueError('Parameter variable must be a nonreserved mathematical name')
+        names[variable] = sage.all.SR.var(variable)
     if not isinstance(expression, str) or not 0 < len(expression.strip()) <= 256:
         raise ValueError('Enter a Sage arithmetic expression (up to 256 characters)')
     try:
@@ -80,17 +109,76 @@ def expression_point(payload):
                 raise ValueError('Only arithmetic, constants, and named math functions are allowed')
             if isinstance(node, ast.Constant) and type(node.value) not in (int, float, complex):
                 raise ValueError('Only numeric literals are allowed')
-            if isinstance(node, ast.Name) and node.id not in EXPRESSION_NAMES:
+            if isinstance(node, ast.Name) and node.id not in names:
                 raise ValueError(f'Unknown constant or function: {node.id}')
             if isinstance(node, ast.Call) and (not isinstance(node.func, ast.Name)
                     or not callable(EXPRESSION_NAMES.get(node.func.id)) or node.keywords):
                 raise ValueError('Only named math functions with positional arguments are allowed')
-        value = CC(sage.all.sage_eval(expression.strip(), locals=EXPRESSION_NAMES))
-        point = point_payload(value)
+        return sage.all.sage_eval(expression.strip(), locals=names)
+    except Exception as exc:
+        raise ValueError(f'Invalid Sage point expression: {exc}') from exc
+
+
+def expression_point(payload):
+    try:
+        point = point_payload(CC(arithmetic_expression(payload.get('expression'))))
         complex_input(point, 'Point')
         return {'point': point}
     except Exception as exc:
         raise ValueError(f'Invalid Sage point expression: {exc}') from exc
+
+
+def curve_config(payload):
+    token = payload.get('session_token')
+    if not isinstance(token, str) or token not in COEFFICIENT_SESSIONS:
+        raise ValueError('Unknown coefficient page session; refresh the page')
+    variable = payload.get('variable')
+    expression = sage.all.SR(arithmetic_expression(payload.get('expression'), variable))
+    if variable is None:
+        raise ValueError('Parameter variable is required')
+    values = []
+    for key in ('start', 'end', 'step'):
+        value = payload.get(key)
+        if isinstance(value, bool):
+            raise ValueError(f'{key} must be finite')
+        value = float(value)
+        if not math.isfinite(value):
+            raise ValueError(f'{key} must be finite')
+        values.append(value)
+    start, end, step = values
+    if start >= end or step <= 0:
+        raise ValueError('Parameter range must increase and step size must be positive')
+    return token, expression, sage.all.SR.var(variable), (start, end), step
+
+
+def graphics_primitives(graphics):
+    from sage.plot.point import Point
+    result = []
+    for primitive in graphics:
+        options = primitive.options()
+        points = [dict(real=float(x), imag=float(y)) for x, y in zip(primitive.xdata, primitive.ydata)]
+        if not all(math.isfinite(v) for point in points for v in point.values()):
+            raise ValueError('Core plot returned nonfinite coordinates')
+        is_point = isinstance(primitive, Point)
+        result.append(dict(geometry='points' if is_point else 'path', points=points, style=dict(
+            rgbcolor=[float(v) for v in to_mpl_color(options['rgbcolor'])],
+            alpha=float(options.get('alpha', 1)), size=float(options.get('size', 10)),
+            zorder=float(options.get('zorder', 2)),
+            linestyle='' if is_point else options.get('linestyle', '-'),
+            marker=options.get('marker', 'o' if is_point else None),
+            markersize=float(options.get('markersize', 6)),
+            thickness=float(options.get('thickness', 1)))))
+    return result
+
+
+def parametric_curve(payload):
+    token, expression, variable, sample_range, step = curve_config(payload)
+    kwargs = dict(parametric_variable=variable, sample_range=sample_range, step_size=step)
+    source = CORE['plot_parametric'](Graphics(), expression, **kwargs)
+    image = CORE['plot_external_rays'](Graphics(), expression, psi=COEFFICIENT_SESSIONS[token][0], **kwargs)
+    return dict(source=graphics_primitives(source), image=graphics_primitives(image),
+                session_token=token, coefficient_count=COEFFICIENT_SESSIONS[token][1],
+                curve_id=payload.get('curve_id'), request_revision=payload.get('request_revision'))
 
 
 def trajectory(payload):
@@ -221,6 +309,11 @@ class Handler(BaseHTTPRequestHandler):
         path = urlsplit(self.path).path
         if path == '/api/health':
             return self.send_data(200, dict(status='ok', engine='sage', core=str(CORE_DIR)))
+        if path == '/api/rays/session':
+            try:
+                return self.send_data(200, coefficient_session())
+            except ValueError as exc:
+                return self.error(503, str(exc))
         if path == '/api/mandelbrot':
             try:
                 return self.send_data(200, curves())
@@ -247,7 +340,9 @@ class Handler(BaseHTTPRequestHandler):
                 raise ValueError('Body must be a JSON object')
             if self.path == '/api/point':
                 return self.send_data(200, expression_point(payload))
-            if self.path == '/api/rebuild':
+            if self.path == '/api/rays/curve':
+                curve_config(payload)
+            elif self.path == '/api/rebuild':
                 config = rebuild(payload)
             elif self.path == '/api/trajectory':
                 # Validate separately so live core failures are not called invalid input.
@@ -259,6 +354,8 @@ class Handler(BaseHTTPRequestHandler):
         except (ValueError, TypeError, OverflowError) as exc:
             return self.error(422, str(exc))
         try:
+            if self.path == '/api/rays/curve':
+                return self.send_data(200, parametric_curve(payload))
             if self.path == '/api/trajectory':
                 return self.send_data(200, trajectory(payload))
             self.send_response(200)

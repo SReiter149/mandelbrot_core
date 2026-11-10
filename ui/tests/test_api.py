@@ -218,5 +218,39 @@ class APITest(unittest.TestCase):
         self.assertIn('Mandelbrot explorer', body)
         self.assertIn('Vector field', body)
 
+    def test_parametric_http_session_and_paired_points(self):
+        import tempfile
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory(dir=ROOT / '.runtime') as directory:
+            with patch.object(self.module, 'SAVES_DIR', Path(directory)):
+                status, body = self.request('/api/rays/session')
+                self.assertEqual(status, 503, body)
+                self.assertEqual(self.request('/api/health')[0], 200)
+                self.module.sage.all.save([1, 2], str(Path(directory) / 'psi_coefficients_9.sobj'))
+                status, body = self.request('/api/rays/session')
+                self.assertEqual(status, 200, body)
+                session = json.loads(body)
+                payload = dict(session_token=session['session_token'], expression='t+I',
+                               variable='t', start=1, end=2, step=.25,
+                               curve_id='http-1', request_revision=1)
+                status, body = self.request('/api/rays/curve', payload)
+                self.assertEqual(status, 200, body)
+                result = json.loads(body)
+                self.assertEqual(len(result['source']), 3)
+                self.assertEqual(len(result['image']), 3)
+                self.assertEqual(result['coefficient_count'], 2)
+                self.assertEqual(result['source'][0]['geometry'], 'points')
+                for changes in ({'expression': 't.__class__'}, {'step': 0},
+                                {'session_token': '../../bad'}):
+                    self.assertEqual(self.request('/api/rays/curve', dict(payload, **changes))[0], 422)
+                status, body = self.request('/api/rays/curve', dict(payload, expression='0'))
+                self.assertEqual(status, 500, body)
+                self.assertIn('No substitute math', body)
+                (Path(directory) / 'psi_coefficients_10.sobj').write_bytes(b'corrupt')
+                self.assertEqual(self.request('/api/rays/session')[0], 503)
+                # The earlier page still holds its already-loaded psi after a bad new save.
+                self.assertEqual(self.request('/api/rays/curve', payload)[0], 200)
+                self.assertEqual(self.request('/api/mandelbrot')[0], 200)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
