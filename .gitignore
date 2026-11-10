@@ -1,3 +1,6 @@
+/tests/testImages/
+/tests/saves/
+
 # Local runtime, OS metadata, and credentials (all directories)
 .runtime/
 .DS_Store
