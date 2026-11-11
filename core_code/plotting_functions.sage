@@ -140,7 +140,7 @@ def plot_parametric(
         parametric_variable = var('t')
 
     sampled_points = [
-        parametric_equation.subs({parametric_variable: v}) 
+        CC(parametric_equation.subs({parametric_variable: v}))
         for v in srange(
             sample_range[0] + step_size, 
             sample_range[1], 
