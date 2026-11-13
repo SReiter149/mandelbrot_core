@@ -28,8 +28,8 @@ See the [interface guide](ui/README.md#using-the-ui) for controls, expression sy
 ### Installation
 
 ```bash
-git clone https://github.com/SReiter149/Mandalbrot-core.git
-cd Mandalbrot-core
+git clone https://github.com/SReiter149/mandelbrot_core.git
+cd mandelbrot_core
 conda env create -f environment.yml
 conda activate mandelbrot
 SAGE_PYTHON="$CONDA_PREFIX/bin/python" bash ui/launch.sh
