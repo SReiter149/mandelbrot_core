@@ -26,7 +26,7 @@ def uniform_polar_point_sampler(center, r_max, spacing):
             yield center + CC(r) * CC(exp(I*angle))
 
 def get_fixed_points(c):
-    return ((1 - (1 - 4*c)**0.5)/2, (1 + (1 - 4*c)**0.5)/2)
+    return ((1 - (1 - 4*c).sqrt())/2, (1 + (1 - 4*c).sqrt())/2)
 
 def quadratic(z, c):
     return z*z+ c
