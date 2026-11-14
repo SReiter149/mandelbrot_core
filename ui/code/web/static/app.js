@@ -75,7 +75,7 @@ async function readDraftConfig() {
     spacing: readNumber("spacing", "Grid spacing"),
     classificationIterations: readInteger("iterations", "Iterations", 1),
     convergenceThreshold: readNumber("threshold", "Convergence threshold"),
-    trajectorySteps: readInteger("trajectory-steps", "Orbit steps"),
+
     vectorLength: 0.1,
   };
   if (!(config.bounds.xmin < config.bounds.xmax)) throw new Error("x maximum must exceed x minimum.");
@@ -203,7 +203,8 @@ function drawVectorSamples(samples) {
 function drawClassificationSamples(samples) {
   const ctx = contexts.classifications;
   const colors = { convergent: "#80b59e", unresolved: "#baac78", divergent: "#b98693", cycle: "#83a9c4" };
-  ctx.globalAlpha = 0.36;
+  // Keep classifications readable on the dark canvas, below the opaque orbit markers.
+  ctx.globalAlpha = 0.7;
   for (const sample of samples) {
     const pixel = worldToCanvas(sample.point, state.transform);
     ctx.fillStyle = colors[sample.outcome];
@@ -424,7 +425,7 @@ async function requestTrajectory(record) {
         request_revision: requestRevision,
         c: state.appliedConfig.c,
         start: record.start,
-        steps: state.appliedConfig.trajectorySteps,
+        steps: readInteger("trajectory-steps", "Orbit steps"),
       }),
       signal: record.controller.signal,
     });
@@ -559,6 +560,14 @@ $("clear-trajectories").addEventListener("click", () => {
   state.trajectories.clear();
   if (state.transform) drawOverlay();
 });
+for (const [controlId, canvas] of [
+  ['show-classification', canvases.classifications],
+  ['show-vectors', canvases.vectors],
+]) {
+  $(controlId).addEventListener('change', () => {
+    canvas.hidden = !$(controlId).checked;
+  });
+}
 window.addEventListener("resize", resizePlot);
 new ResizeObserver(resizePlot).observe(plotFrame);
 

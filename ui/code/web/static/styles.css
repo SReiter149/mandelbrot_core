@@ -80,6 +80,9 @@ legend, .legend h2 {
 }
 .field-grid { display: grid; gap: 9px; }
 .field-grid.two { grid-template-columns: 1fr 1fr; }
+.orbit-entry { grid-template-columns: minmax(0, 2fr) minmax(80px, 1fr); }
+.layer-controls label { display: flex; align-items: center; gap: 8px; margin: 9px 0; }
+.layer-controls input { width: auto; margin: 0; accent-color: var(--accent); }
 label {
   display: grid;
   gap: 5px;
@@ -163,6 +166,13 @@ button.secondary:hover { background: rgba(255,255,255,.06); }
   justify-content: space-between;
   align-items: flex-end;
   margin-bottom: 16px;
+}
+#vector-workspace { height: 100dvh; min-height: 0; padding: 18px 22px 14px; }
+#vector-workspace .workspace-header, #vector-workspace .plot-footer { flex-shrink: 0; }
+#vector-workspace .plot-frame { min-height: 0; }
+@media (min-width: 881px) {
+  .control-panel { position: sticky; top: 0; max-height: 100dvh; }
+  #vector-workspace { position: sticky; top: 0; }
 }
 .workspace-header h2 { margin: 6px 0 0; font-size: 21px; font-weight: 510; letter-spacing: -.3px; }
 .status-cluster { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; }

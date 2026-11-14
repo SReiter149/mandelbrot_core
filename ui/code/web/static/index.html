@@ -71,9 +71,9 @@
           <div class="field-grid two">
             <label>Grid spacing<input id="spacing" type="number" min="0.000001" step="any" value="0.2"></label>
             <label>Iterations<input id="iterations" type="number" min="1" step="1" value="50"></label>
-            <label>Orbit steps<input id="trajectory-steps" type="number" step="1" value="10"></label>
+
           </div>
-          <p class="help">Orbit steps: positive for a forward path, negative for pullback points, zero for the target only.</p>
+
           <label>convergence_threshold<input id="threshold" type="number" min="0.000000001" step="any" value="0.001"></label>
         </fieldset>
 
@@ -85,11 +85,20 @@
       </form>
 
       <form id="vector-point-form" class="point-entry" hidden>
-        <label>Exact starting point z<input id="vector-point" type="text" placeholder="sqrt(2) * I / pi" autocomplete="off" maxlength="256" required></label>
+        <div class="field-grid orbit-entry">
+          <label>Exact starting point z<input id="vector-point" type="text" placeholder="sqrt(2) * I / pi" autocomplete="off" maxlength="256" required></label>
+          <label>Orbit steps<input id="trajectory-steps" type="number" step="1" value="10" required></label>
+        </div>
         <button type="submit" class="secondary">Plot z</button>
+        <p class="help">Orbit steps apply immediately to new orbits, including plot clicks. Positive: forward path; negative: pullback points; zero: target only. No rebuild needed.</p>
         <p class="help">Sage arithmetic: I, pi, e, sqrt(…), and ^. Uses the current applied parameter c.</p>
       </form>
       <section id="vector-legend" class="legend" aria-label="Plot legend" hidden>
+        <fieldset class="layer-controls">
+          <legend>Show layers</legend>
+          <label><input id="show-classification" type="checkbox" checked>Classification colors</label>
+          <label><input id="show-vectors" type="checkbox" checked>Green vectors</label>
+        </fieldset>
         <h2>Legend</h2>
         <div><i class="swatch convergent"></i><span>Converges to a fixed point</span></div>
         <div><i class="swatch unresolved"></i><span>Unresolved within limit</span></div>
