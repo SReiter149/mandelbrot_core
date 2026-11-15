@@ -1,9 +1,12 @@
 from pathlib import Path
+import sys 
 
-root = Path(__file__).resolve().parent.parent
+file = Path(sys.argv[0]).resolve()
+root = file.parent.parent
 load(str(root / "load_core.sage"))
 
 save_dir = root  / 'saves' / 'psi_coeffs'
 save_dir.mkdir(parents = True, exist_ok = True)
 
+print('starting to generate coeffs')
 generate_psi_coeffs(9, save_dir, batch_size = 30)

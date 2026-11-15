@@ -1,6 +1,10 @@
-from pathlib import Path
 
-root = Path(__file__).resolve().parent.parent
+from pathlib import Path
+import sys 
+
+file = Path(sys.argv[0]).resolve()
+
+root = file.parent.parent
 load(str(root / "load_core.sage"))
 imageLocation = root / "tests" / "testImages"
 
