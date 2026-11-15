@@ -26,8 +26,8 @@ else
   RUNNER=("$SAGE_BIN" -python)
 fi
 if [[ "${EXPLORER_CHECK_ONLY:-0}" == "1" ]]; then exit 0; fi
-CORE_DIR="$ROOT/../core_code"
-for helper in math_functions.sage plotting_functions.sage mandelbrot.sage; do
+CORE_DIR="$ROOT/../core"
+for helper in constants.sage math.sage misc.sage external_rays.sage plot.sage mandelbrot.sage analysis.sage; do
   if [[ ! -f "$CORE_DIR/$helper" ]]; then
     printf 'Missing core helper: %s/%s\nRun ui/launch.sh from a complete combined checkout.\n' "$CORE_DIR" "$helper" >&2
     exit 1

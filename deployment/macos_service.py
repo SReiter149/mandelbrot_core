@@ -21,9 +21,9 @@ def absolute(path):
 def find_root(source=None):
     """Find the combined repository from this script, not the caller's cwd."""
     for root in Path(source or __file__).resolve().parents:
-        if (root / 'core_code').is_dir() and (root / 'ui/code/web/server.py').is_file():
+        if (root / 'core').is_dir() and (root / 'ui/code/web/server.py').is_file():
             return root
-    raise ValueError('Place deployment/ in the repository containing core_code/ and ui/code/web/server.py')
+    raise ValueError('Place deployment/ in the repository containing core/ and ui/code/web/server.py')
 
 
 def generate_config(*, root, home, python, cloudflared, tunnel_id,
@@ -75,8 +75,8 @@ def install(**options):
     """Validate dependencies and write configs only; never call launchctl."""
     plists, config_path, config = generate_config(**options)
     root, home = absolute(options['root']), absolute(options['home'])
-    if not (root / 'ui/code/web/server.py').is_file() or not (root / 'core_code').is_dir():
-        raise ValueError('root must contain core_code/ and ui/code/web/server.py')
+    if not (root / 'ui/code/web/server.py').is_file() or not (root / 'core').is_dir():
+        raise ValueError('root must contain core/ and ui/code/web/server.py')
     for name in ('python', 'cloudflared'):
         path = absolute(options[name])
         if not path.is_file() or not os.access(path, os.X_OK):

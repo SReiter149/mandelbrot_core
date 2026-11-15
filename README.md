@@ -4,7 +4,7 @@ An interactive tool for exploring complex quadratic dynamics with SageMath. Expl
 
 **[Open the explorer at samreiter.com](https://samreiter.com)** — no local installation required to use the hosted version.
 
-> **Human-written mathematics, AI-written interface:** The mathematics and Sage plotting functions in `core_code/` are written by Sam Reiter. The browser interface and supporting HTTP server in `ui/` are AI-written and kept separate from the mathematical core.
+> **Human-written mathematics, AI-written interface:** The mathematics and Sage plotting functions in `core/` are written by Sam Reiter. The browser interface and supporting HTTP server in `ui/` are AI-written and kept separate from the mathematical core.
 
 ## What you can explore
 
@@ -62,7 +62,7 @@ Only load Sage `.sobj` files you trust: they are executable serialized objects. 
 ## Repository structure
 
 ```text
-core_code/       Human-written mathematics and Sage plotting functions
+core/       Human-written mathematics and Sage plotting functions
 tests/           Core mathematics tests
 ui/              Browser interface, HTTP server, launcher, and UI tests
 deployment/      macOS service and Cloudflare Tunnel setup
@@ -70,6 +70,28 @@ environment.yml SageMath environment specification
 ```
 
 The interface loads the core functions directly rather than maintaining a second implementation of the mathematics.
+
+## Loading the core in Sage scripts
+
+Load the shared entry point rather than repeating individual filenames:
+
+```python
+from pathlib import Path
+
+root = Path(__file__).resolve().parent  # a script at the repository root
+load(str(root / "load_core.sage"))
+```
+
+For scripts in the sibling `run_code/` directory, use
+`root = Path(__file__).resolve().parent.parent` and
+`load(str(root / "mandelbrot_core" / "load_core.sage"))`.
+The loader handles dependency order for all seven core files and preserves the
+caller's `root` and `__file__`, so later image/save paths keep their meaning.
+It loads definitions; it does not run analyses or generate coefficients.
+
+Python callers running inside Sage use `sage.repl.load.load(path, namespace)`;
+see `tests/math/conftest.py` for a shared, isolated pytest fixture. Notebook
+callers should set an explicit repository path before loading the entry point.
 
 ## Testing
 
@@ -81,4 +103,4 @@ The [deployment guide](deployment/README.md) covers macOS login services, Cloudf
 
 ## Development
 
-Mathematical functions and Sage plotting code live in `core_code/`; interface and transport changes belong in `ui/`. See [AGENTS.md](AGENTS.md) for AI-assistant contribution boundaries. Documents under `ui/docs/` are archived design history, not current setup instructions.
+Mathematical functions and Sage plotting code live in `core/`; interface and transport changes belong in `ui/`. See [AGENTS.md](AGENTS.md) for AI-assistant contribution boundaries. Documents under `ui/docs/` are archived design history, not current setup instructions.

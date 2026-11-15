@@ -1,9 +1,7 @@
 from pathlib import Path
 
 root = Path(__file__).resolve().parent.parent
-load(str(root / "core_code" / "external_rays.sage"))
-load(str(root / "core_code" / "math_functions.sage"))
-load(str(root / "core_code" / "plotting_functions.sage"))
+load(str(root / "load_core.sage"))
 image_location = root / "tests" / "testImages"
 
 def test_add_points_1():

@@ -23,10 +23,9 @@ from sage.plot.colors import to_mpl_color
 ROOT = Path(__file__).resolve().parents[2]
 STATIC = ROOT / 'code/web/static'
 PUBLIC_ORIGIN = os.environ.get('PUBLIC_ORIGIN', '').rstrip('/')
-CORE_DIR = ROOT.parent / 'core_code'
-CORE = dict(vars(sage.all))
-for filename in ('math_functions.sage', 'plotting_functions.sage', 'mandelbrot.sage', 'external_rays.sage'):
-    load(str(CORE_DIR / filename), CORE)
+CORE_DIR = ROOT.parent / 'core'
+CORE = {'__file__': __file__}
+load(str(ROOT.parent / 'load_core.sage'), CORE)
 
 SAVES_DIR = Path(os.environ.get('PSI_SAVES_DIR', str(ROOT.parent / 'saves')))
 # Opaque, server-issued identities hold the loaded psi, never a client-supplied path.
