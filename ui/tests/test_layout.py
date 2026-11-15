@@ -16,7 +16,7 @@ class LayoutTests(unittest.TestCase):
                           and any(isinstance(target, ast.Name) and target.id == 'CORE_DIR'
                                   for target in node.targets))
         actual = eval(compile(ast.Expression(assignment.value), '<CORE_DIR>', 'eval'), {'ROOT': ROOT})
-        self.assertEqual(actual, ROOT.parent / 'core_code')
+        self.assertEqual(actual, ROOT.parent / 'core')
         self.assertTrue((actual / 'mandelbrot.sage').is_file())
 
     def test_launcher_finds_combined_core_before_invoking_server(self):

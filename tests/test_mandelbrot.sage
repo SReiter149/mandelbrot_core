@@ -1,8 +1,7 @@
 from pathlib import Path
 
 root = Path(__file__).resolve().parent.parent
-load(str(root / "core_code" / "mandelbrot.sage"))
-load(str(root / "core_code" / "math_functions.sage"))
+load(str(root / "load_core.sage"))
 imageLocation = root / "tests" / "testImages"
 
 
