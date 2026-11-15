@@ -1,12 +1,12 @@
 # Mandelbrot UI
 
-A local browser UI for the SageMath functions in this checkout’s `../core_code/`. The core owns all mathematics and Sage plotting functions; this repository supplies controls, browser presentation, and HTTP transport. Core sources are loaded directly, not copied.
+A local browser UI for the SageMath functions in this checkout’s `../core/`. The core owns all mathematics and Sage plotting functions; this repository supplies controls, browser presentation, and HTTP transport. Core sources are loaded directly, not copied.
 
-> **AI-written UI / human-written mathematics:** This package contains the AI-written interface and supporting server. Sam’s human-written mathematics and Sage plotting functions remain separately organized in the root `core_code/` directory of the same checkout.
+> **AI-written UI / human-written mathematics:** This package contains the AI-written interface and supporting server. Sam’s human-written mathematics and Sage plotting functions remain separately organized in the root `core/` directory of the same checkout.
 
 ## Requirements
 
-- This combined checkout, including `../core_code/` and its dependencies.
+- This combined checkout, including `../core/` and its dependencies.
 - SageMath with Python 3.9 or later. The consolidated API and streaming tests pass locally with SageMath 10.9; the source UI also documented testing with 10.7. Other platforms/versions are not verified.
 - Bash and a modern browser.
 - Node.js only if you want to run the frontend tests.
@@ -17,14 +17,14 @@ Ordinary Python is **not** enough: the server imports Sage and must run through 
 
 ```text
 mandelbrot_core/
-├── core_code/          # human-written mathematics; read-only for agents
+├── core/          # human-written mathematics; read-only for agents
 ├── tests/              # existing core tests; read-only for agents
 └── ui/
     ├── launch.sh
     └── code/web/server.py
 ```
 
-No separate sibling repository is required. With `ROOT` set to `ui/`, the server uses `CORE_DIR = ROOT.parent / 'core_code'`. There is no core-path override.
+No separate sibling repository is required. With `ROOT` set to `ui/`, the server uses `CORE_DIR = ROOT.parent / 'core'` and the shared root `load_core.sage` entry point. There is no core-path override.
 
 ## Choose SageMath and start
 
@@ -159,7 +159,7 @@ If no numbered save exists or the selected winner is corrupt, External rays disp
 ## Troubleshooting
 
 - **Sage executable not found:** install Sage (on macOS, `brew install --cask sage`) and rerun. For a nonstandard location, set `SAGE` explicitly.
-- **Missing core file:** check that `../core_code/` exists in this combined checkout.
+- **Missing core file:** check that `../core/` exists in this combined checkout.
 - **Address already in use:** stop the existing server or choose another `PORT`.
 - **Core traceback / partial plot:** inspect the named core function. A plotting or classification error may leave earlier successfully rendered layers visible. Restart after fixing saved core code.
 - **Old behavior after edits:** restart the server and refresh the page.

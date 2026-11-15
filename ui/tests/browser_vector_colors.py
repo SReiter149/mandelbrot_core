@@ -31,7 +31,7 @@ with sync_playwright() as p:
     page.wait_for_function("(window.colors['overlay-canvas'] || []).some(p => p.method === 'arc' && p.args[2] === 2.2 && p.fill === '#fff1b8')")
     colors = page.evaluate('window.colors')
     assert all(p['alpha'] <= .4 for p in colors['vector-canvas'] if p['method'] == 'stroke'), 'Arrows must stay behind selected points'
-    assert all(p['alpha'] <= .4 for p in colors['classification-canvas'] if p['method'] == 'arc'), 'Classifications must stay behind selected points'
+    assert all(.6 <= p['alpha'] < 1 for p in colors['classification-canvas'] if p['method'] == 'arc'), 'Classifications must be readable but remain below opaque selected points'
     assert any(p['fill'] == '#7dd3fc' and p['args'][2] == 4.5 for p in colors['overlay-canvas'] if p['method'] == 'arc'), 'Fixed points must use a different hue'
     swatch = page.locator('.swatch.orbit').evaluate('(el) => getComputedStyle(el).backgroundColor')
     assert swatch == 'rgb(255, 241, 184)', 'Legend must match the first selected set'

@@ -29,7 +29,7 @@ class ServiceTests(unittest.TestCase):
         self.server = self.root / 'ui/code/web/server.py'
         self.server.parent.mkdir(parents=True)
         self.server.touch()
-        (self.root / 'core_code').mkdir()
+        (self.root / 'core').mkdir()
         self.home = self.base / 'home'
         self.credentials = self.base / 'credentials.json'
         self.credentials.write_text('SECRET SENTINEL: DO NOT READ')

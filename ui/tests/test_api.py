@@ -62,7 +62,7 @@ class APITest(unittest.TestCase):
     def test_health_live_core(self):
         status, body = self.request('/api/health')
         self.assertEqual(status, 200)
-        self.assertEqual(Path(json.loads(body)['core']), ROOT.parent / 'core_code')
+        self.assertEqual(Path(json.loads(body)['core']), ROOT.parent / 'core')
 
     def test_curves_are_users_graphics(self):
         status, body = self.request('/api/mandelbrot')
