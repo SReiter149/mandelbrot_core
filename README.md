@@ -6,6 +6,17 @@ An interactive tool for exploring complex quadratic dynamics with SageMath. Expl
 
 > **Human-written mathematics, AI-written interface:** The mathematics and Sage plotting functions in `core/` are written by Sam Reiter. The browser interface and supporting HTTP server in `ui/` are AI-written and kept separate from the mathematical core.
 
+## Mathematical sources
+
+The following sources informed the development of the mathematics used in this site:
+
+- B. Bielefeld, Y. Fisher, and F. v. Haeseler. “Computing the Laurent Series of the Map $\Psi : \mathbb{C} - \overline{\mathbb{D}} \to \mathbb{C} - M$.” *Advances in Applied Mathematics* **14**, 25–38 (1993).
+- Robert L. Devaney. *An Introduction to Chaotic Dynamical Systems*. 3rd ed., CRC Press, 2022. [DOI: 10.1201/9780429280801](https://doi.org/10.1201/9780429280801).
+- Robert L. Devaney. “The Mandelbrot Set and The Farey Tree.” December 29, 1997.
+- Adrien Douady and John H. Hubbard. *Exploring the Mandelbrot Set: The Orsay Notes* (1984?).
+- Davide Legacci. “Parabolic Fixed Points: The Leau-Fatou Flower.” March 18, 2021.
+- Roland K. W. Roeder. *Around the Boundary of Complex Dynamics*. Notes for the 2015 Thematic Program on Boundaries and Dynamics, Notre Dame University.
+
 ## What you can explore
 
 - **Mandelbrot explorer:** select complex parameters and compare the resulting orbits of zero alongside curves drawn by the mathematical core.
